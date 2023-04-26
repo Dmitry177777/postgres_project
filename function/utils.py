@@ -1,6 +1,7 @@
 from requests import get, post, put, delete
 import json
 import psycopg2
+import data.API_connect
 
 list = []
 def get_vacancies():
@@ -27,23 +28,26 @@ def get_vacancies():
 
     return list
 
+print (get_vacancies())
+
+data.API_connect.HeadHunterAPI.create_postgres()
 
 # Создаем подключение к PosgrySQL
-conn = psycopg2.connect(host='localhost', user='postgres', password='171717')
-
-# включаем автоматическое сохранение изменений в БД
-conn.autocommit = True
-data_base_name = 'base'
-
-try:
-    with conn.cursor() as cur:
-        # проверка на наличе БД с требуемым именем
-        exists = cur.execute(f"SELECT COUNT(*) = 0 FROM pg_catalog.pg_database WHERE datname = '{data_base_name}'")
-        # если такой БД нет мы ее создаем
-        if not exists:
-            cur.execute(f'CREATE DATABASE  "{data_base_name}"')
-
-except:
-    raise
-finally:
-    conn.close()
+# conn = psycopg2.connect(host='localhost', user='postgres', password='171717')
+#
+# # включаем автоматическое сохранение изменений в БД
+# conn.autocommit = True
+# data_base_name = 'base'
+#
+# try:
+#     with conn.cursor() as cur:
+#         # проверка на наличе БД с требуемым именем
+#         exists = cur.execute(f"SELECT COUNT(*) = 0 FROM pg_catalog.pg_database WHERE datname = '{data_base_name}'")
+#         # если такой БД нет мы ее создаем
+#         if not exists:
+#             cur.execute(f'CREATE DATABASE  "{data_base_name}"')
+#
+# except:
+#     raise
+# finally:
+#     conn.close()

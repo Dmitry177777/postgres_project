@@ -66,8 +66,40 @@ class HeadHunterAPI (Engine):
         self.url ='https://api.hh.ru/vacancies'
         self.pages = int(-1 * top // 1 * -1) # кругление количества страниц в большую сторону
         self.list = self.get_vacancies()
-
+        create_postgres()
         pass
+    @staticmethod
+    def create_postgres():
+        """оздаем базу и структуру данных в PostgreSQL"""
+
+        # Создаем подключение к PosgrySQL
+
+        conn = psycopg2.connect(host='localhost', user='postgres', password='171717')
+
+        # включаем автоматическое сохранение изменений в БД
+        #conn.autocommit = True
+        # название рабочей БД
+        data_base_name = 'base'
+
+        try:
+            with conn.cursor() as cur:
+                # создаем БД если она есть, ловим ошибку
+                cur.execute(f'CREATE DATABASE "{data_base_name}"'
+                            f"USE '{data_base_name}';"
+                            f"CREATE TABLE employer "
+                            f"(Id SERIAL PRIMARY KEY,"
+                            f" FirstName CHARACTER VARYING(30), "
+                            f"LastName CHARACTER VARYING(30), "
+                            f"Email CHARACTER VARYING(30), "
+                            f"ge INTEGER )")
+            conn.commit() # сохранение изменений в базе
+        except:
+            raise
+        finally:
+            conn.close()
+        pass
+
+
 
     def get_page(self, page = 0):
         """
@@ -97,50 +129,9 @@ class HeadHunterAPI (Engine):
         return data_page
 
 
+
     def get_vacancies(self):
         """переноса агруженных данных в PostgreSQL"""
-
-    #Создаем подключение к PosgrySQL
-    conn = psycopg2.connect(host='localhost', user='postgres', password='171717')
-
-    # включаем автоматическое сохранение изменений в БД
-    conn.autocommit = True
-    # название рабочей БД
-    data_base_name = 'base'
-
-    try:
-        with conn.cursor() as cur:
-            # проверка на наличе БД с требуемым именем
-            exists = cur.execute(f"SELECT COUNT(*) = 0 FROM pg_catalog.pg_database WHERE datname = '{data_base_name}'")
-            # если такой БД нет мы ее создаем
-            if not exists:
-                cur.execute(f'CREATE DATABASE  "{data_base_name}"')
-
-    except:
-        raise
-    finally:
-        conn.close()
-
-    # Создаем таблицы и структуру БД
-    # Создаем подключение к PosgrySQL
-    conn = psycopg2.connect(host='localhost', dbname=f'{data_base_name}', user='postgres', password='171717')
-
-    try:
-        with conn.cursor() as cur:
-            # проверка на наличе БД с требуемым именем
-            exists = cur.execute(f"SELECT COUNT(*) = 0 FROM "
-                                 f"pg_catalog.pg_database WHERE datname = '{data_base_name}'")
-            # если такой БД нет мы ее создаем
-            if not exists:
-                cur.execute(f'CREATE DATABASE  "{data_base_name}"')
-
-    except:
-        raise
-    finally:
-        conn.close()
-
-
-
 
         for page in range(0, self.pages):
 
