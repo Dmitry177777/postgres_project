@@ -60,13 +60,12 @@ class Vacancy ():
 
 class HeadHunterAPI (Engine):
     """"Класс HeadHunterAPI"""
-    list = []
 
-    def __init__(self, vacancy, top_n):
+    def __init__(self, vacancy, top):
         self.vacancy = vacancy
         self.url ='https://api.hh.ru/vacancies'
-        self.pages = int(-1 * top_n // 1 * -1)
-        self.job_list = self.get_vacancies()
+        self.pages = int(-1 * top // 1 * -1) # кругление количества страниц в большую сторону
+        self.list = self.get_vacancies()
 
         pass
 
@@ -88,15 +87,60 @@ class HeadHunterAPI (Engine):
         # проверка на наличие данных на странице
         try:
             if  data.get('items',{})[0].get('id') is not None:
-                self.list.append(data)
+                data_page = data
+            else:
+                data_page = None
         except:
             raise
-        req.close()
-        return data
+        finally:
+            req.close()
+        return data_page
 
 
     def get_vacancies(self):
         """переноса агруженных данных в PostgreSQL"""
+
+    #Создаем подключение к PosgrySQL
+    conn = psycopg2.connect(host='localhost', user='postgres', password='171717')
+
+    # включаем автоматическое сохранение изменений в БД
+    conn.autocommit = True
+    # название рабочей БД
+    data_base_name = 'base'
+
+    try:
+        with conn.cursor() as cur:
+            # проверка на наличе БД с требуемым именем
+            exists = cur.execute(f"SELECT COUNT(*) = 0 FROM pg_catalog.pg_database WHERE datname = '{data_base_name}'")
+            # если такой БД нет мы ее создаем
+            if not exists:
+                cur.execute(f'CREATE DATABASE  "{data_base_name}"')
+
+    except:
+        raise
+    finally:
+        conn.close()
+
+    # Создаем таблицы и структуру БД
+    # Создаем подключение к PosgrySQL
+    conn = psycopg2.connect(host='localhost', dbname=f'{data_base_name}', user='postgres', password='171717')
+
+    try:
+        with conn.cursor() as cur:
+            # проверка на наличе БД с требуемым именем
+            exists = cur.execute(f"SELECT COUNT(*) = 0 FROM "
+                                 f"pg_catalog.pg_database WHERE datname = '{data_base_name}'")
+            # если такой БД нет мы ее создаем
+            if not exists:
+                cur.execute(f'CREATE DATABASE  "{data_base_name}"')
+
+    except:
+        raise
+    finally:
+        conn.close()
+
+
+
 
         for page in range(0, self.pages):
 
@@ -105,7 +149,7 @@ class HeadHunterAPI (Engine):
 
             # Проверка на наличие данных на странице
             try:
-                if r_page.get('items',{})[0].get('id') is None:
+                if r_page is None:
                     break
             except:
                 raise
