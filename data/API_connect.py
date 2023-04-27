@@ -68,50 +68,6 @@ class HeadHunterAPI (Engine):
         self.list = self.get_vacancies()
         create_postgres()
         pass
-    @staticmethod
-    def create_postgres():
-        """оздаем базу и структуру данных в PostgreSQL"""
-
-        # Создаем подключение к PosgrySQL
-
-        conn = psycopg2.connect(host='localhost', user='postgres', password='171717')
-
-        # включаем автоматическое сохранение изменений в БД
-        #conn.autocommit = True
-        # название рабочей БД
-        data_base_name = 'base'
-
-        try:
-            with conn.cursor() as cur:
-                # создаем БД если она есть пропускаем этап создания
-                cur.execute(f"SELECT COUNT(*) = 0 FROM pg_catalog.pg_database WHERE datname = '{data_base_name}';")
-                exists = cur.fetchone()
-                if not exists:
-                    cur.execute(f"CREATE DATABASE {data_base_name};")
-                    conn.commit() # сохранение изменений в базе
-        except:
-            raise
-        finally:
-            conn.close()
-
-        conn = psycopg2.connect(dbname=f'{data_base_name}', host='localhost', user='postgres', password='171717')
-
-        try:
-            with conn.cursor() as cur:
-                cur.execute(f"CREATE TABLE IF NOT EXISTS employer " # создаем таблицу если ее нет
-                            f"(Id SERIAL PRIMARY KEY,"
-                            f" FirstName CHARACTER VARYING(30), "
-                            f"LastName CHARACTER VARYING(30), "
-                            f"Email CHARACTER VARYING(30), "
-                            f"ge INTEGER )")
-
-            conn.commit() # сохранение изменений в базе
-
-        except:
-            raise
-        finally:
-            conn.close()
-        pass
 
 
 
@@ -181,3 +137,138 @@ class HeadHunterAPI (Engine):
 
         print('Вакансии HeadHunter сохранены в файл')
         return json.dumps(self.list, ensure_ascii=False)
+
+    @staticmethod
+    def create_postgres():
+        """cоздаем базу и структуру данных в PostgreSQL"""
+
+        # Создаем подключение к PosgrySQL
+
+        conn = psycopg2.connect(host='localhost', user='postgres', password='171717')
+
+        # включаем автоматическое сохранение изменений в БД
+        conn.autocommit = True
+        # название рабочей БД
+        data_base_name = 'base'
+
+        try:
+            with conn.cursor() as cur:
+                # создаем БД если она есть пропускаем этап создания
+                cur.execute(f"SELECT COUNT(*) = 0 FROM pg_catalog.pg_database WHERE datname = '{data_base_name}';")
+                exists = cur.fetchone()
+                if exists:
+                    cur.execute(f"CREATE DATABASE {data_base_name};")
+        except:
+            raise
+        finally:
+            conn.close()
+
+        conn = psycopg2.connect(dbname=f'{data_base_name}', host='localhost', user='postgres', password='171717')
+
+        try:
+            with conn.cursor() as cur:
+
+                # Таблица работодателей
+
+                # 'items': [
+                # {
+                #'employer': {
+                # 'id': '598471',
+                # 'name': 'evrone.ru',
+                # 'url': 'https://api.hh.ru/employers/598471',
+                # 'alternate_url': 'https://hh.ru/employer/598471',
+                # 'logo_urls': {'original': 'https://hhcdn.ru/employer-logo-original/479584.png',
+                                # '240': 'https://hhcdn.ru/employer-logo/2360189.png',
+                                # '90': 'https://hhcdn.ru/employer-logo/2360188.png'},
+                # 'vacancies_url': 'https://api.hh.ru/vacancies?employer_id=598471',
+                # 'trusted': True
+                # },
+
+
+                cur.execute(f"CREATE TABLE IF NOT EXISTS employer " # создаем таблицу если ее нет
+                            f"(id_employer SERIAL PRIMARY KEY,"
+                            f"employer_id INTEGER UNIQUE NOT NULL, "
+                            f"employer_name CHARACTER VARYING(30), "
+                            f"employer_url CHARACTER VARYING(30), "
+                            f"employer_vacancies_url CHARACTER VARYING(30), "
+                            f"employer_trusted bit " #0,1,null
+                            f")")
+                conn.commit()  # сохранение изменений в базе
+
+                #Таблица area
+                # 'items': [
+                # {
+                # 'area': {'id': '1', 'name': 'Москва', 'url': 'https://api.hh.ru/areas/1'},
+                cur.execute(f"CREATE TABLE IF NOT EXISTS area "  # создаем таблицу если ее нет
+                            f"(id_area SERIAL PRIMARY KEY,"
+                            f"area_id INTEGER UNIQUE NOT NULL, "
+                            f"area_name CHARACTER VARYING(30), "
+                            f"area_url CHARACTER VARYING(30) "
+                            f")")
+                conn.commit()  # сохранение изменений в базе
+
+                # Таблица type
+                # 'items': [
+                # {
+                # 'type': {'id': 'open', 'name': 'Открытая'},
+                cur.execute(f"CREATE TABLE IF NOT EXISTS type "  # создаем таблицу если ее нет
+                            f"(id_type SERIAL PRIMARY KEY,"
+                            f"type_id INTEGER UNIQUE NOT NULL, "
+                            f"type_name CHARACTER VARYING(30) "
+                            f")")
+                conn.commit()  # сохранение изменений в базе
+
+                #Таблица вакансий
+
+                #'items': [
+                # {
+                # 'id': '79663730',
+                # 'premium': False,
+                # 'name': 'Python-разработчик (Junior)',
+                # 'department': None,
+                # 'has_test': False,
+                # 'response_letter_required': False,
+
+                # 'salary': {'from': 50000, 'to': 70000, 'currency': 'RUR', 'gross': False},
+
+                # 'address': None,
+                # 'response_url': None,
+                # 'sort_point_distance': None,
+                # 'published_at': '2023-04-26T20:00:18+0300',
+                # 'created_at': '2023-04-26T20:00:18+0300',
+                # 'archived': False,
+                # 'apply_alternate_url': 'https://hh.ru/applicant/vacancy_response?vacancyId=79663730',
+                # 'insider_interview': None,
+                # 'url': 'https://api.hh.ru/vacancies/79663730?host=hh.ru',
+                # 'adv_response_url': None,
+                # 'alternate_url': 'https://hh.ru/vacancy/79663730',
+                # 'relations': [],
+
+                cur.execute(f"CREATE TABLE IF NOT EXISTS vacancy "  # создаем таблицу если ее нет
+                            f"(id_vacancy SERIAL PRIMARY KEY,"
+                            f"id INTEGER UNIQUE NOT NULL, "
+                            f"name CHARACTER VARYING(30), "
+                            f"departament CHARACTER VARYING(30), "
+                            f"id_area INTEGER REFERENCES area (id_area), "
+                            f"salary_from INTEGER, "
+                            f"salary_to INTEGER, "
+                            f"salary_currency CHARACTER VARYING(10), "
+                            f"salary_gross bit, " #0,1,null
+                            f"id_type INTEGER REFERENCES type (id_type), "
+                            f"address CHARACTER VARYING(30), "
+                            f"response_url CHARACTER VARYING(30), "
+                            f"sort_point_distance CHARACTER VARYING(30), "
+                            f"published_at CHARACTER VARYING(30), "
+                            f"created_at CHARACTER VARYING(30), "
+                            f"archived bit, " #0,1,null
+                            f"id_employer INTEGER REFERENCES employer (id_employer)"
+                            f")")
+
+
+                conn.commit() # сохранение изменений в базе
+
+        except:
+            raise
+        finally:
+            conn.close()
+        pass
