@@ -77,6 +77,8 @@ class Vacancy :
             try:
                 with conn.cursor() as cur:
                     for row in r_page.get("items"):
+
+
                         # таблица employer
                         # проверка значения на уникальность
                         cur.execute(f'select count (employer_id) from employer WHERE employer_id = {row.get("employer", {}).get("id")}')
@@ -110,6 +112,7 @@ class Vacancy :
                         #получение номера pk
                         cur.execute(f"SELECT MAX(id_area) FROM area")
                         id_area_i = cur.fetchone()[0]
+
                         # таблица type
                         # внесение  записей
                         cur.execute("INSERT INTO type (type_id, type_name) VALUES (%s, %s)",
@@ -122,31 +125,51 @@ class Vacancy :
                         id_type_i = cur.fetchone()[0]
 
                         # таблица vacancy
-                        # внесение  записей
-
-                        cur.execute("INSERT INTO employer (id, name, departament, id_area, salary_from, salary_to, salary_currency, salary_gross, id_type, address, response_url, sort_point_distance, published_at, created_at, archived, id_employer) "
-                                    "VALUES (%s, %s, %s, %s, %s,%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                        # внесение  записей ч.1
+                        cur.execute(f"INSERT INTO vacancy "
+                            "(id, "
+                            "name, "
+                            "departament, "
+                            "id_area, "
+                            "salary_from, "
+                            "salary_to, "
+                            "salary_currency, "
+                            "salary_gross) "
+                            "VALUES (%s,%s,%s,%s,%s,%s,%s,%s)",
                             (row.get("id"),
                              row.get("name"),
-                             row.get("department"),
+                             row.get("department") or "",
                              id_area_i,
-                             row.get("salary", {}).get("from"),
-                             row.get("salary", {}).get("to"),
+                             row.get("salary", {}).get("from") or 0,
+                             row.get("salary", {}).get("to") or 0,
                              row.get("salary", {}).get("currency"),
-                             '1' if row.get("salary", {}).get("gross") else '0'), # если True то записываем 1, если False то записываем 0
-                             id_type_i,
-                             row.get("address"),
-                             row.get("response_url"),
-                             row.get("sort_point_distance"),
-                             row.get("published_at"),
-                             row.get("created_at"),
-                             '1' if row.get("archived") else '0',  # если True то записываем 1, если False то записываем 0,
-                             id_employer_i
-                             )
+                             '1' if row.get("salary", {}).get("gross") else '0')) # если True то записываем 1, если False то записываем 0
+
+
+                        cur.execute(f"INSERT INTO vacancy "
+                                    "(id_type, "
+                                    "address, "
+                                    "response_url, "
+                                    "sort_point_distance, "
+                                    "published_at, "
+                                    "created_at, "
+                                    "archived, "
+                                    "id_employer) "
+                                    "VALUES (%s,%s,%s,%s,%s,%s,%s,%s)",
+                                    (id_type_i,
+                                     row.get("address") or "",
+                                     row.get("response_url") or "",
+                                     row.get("sort_point_distance") or "",
+                                     row.get("published_at"),
+                                     row.get("created_at"),
+                                     '1' if row.get("archived") else '0',
+                                     # если True то записываем 1, если False то записываем 0,
+                                     id_employer_i))
+
 
                         conn.commit()  # сохранение изменений в базе
 
-            except:
+            except AttributeError:
                 raise
             finally:
                 conn.close()
@@ -263,7 +286,7 @@ class Vacancy :
                 cur.execute(f"CREATE TABLE vacancy "  # создаем таблицу если ее нет
                             f"(id_vacancy SERIAL PRIMARY KEY,"
                             f"id INTEGER UNIQUE NOT NULL, "
-                            f"name CHARACTER VARYING(30), "
+                            f"name CHARACTER VARYING(60), "
                             f"departament CHARACTER VARYING(30), "
                             f"id_area INTEGER REFERENCES area (id_area), "
                             f"salary_from INTEGER, "
@@ -272,10 +295,10 @@ class Vacancy :
                             f"salary_gross bit, " #0,1,null
                             f"id_type INTEGER REFERENCES type (id_type), "
                             f"address CHARACTER VARYING(30), "
-                            f"response_url CHARACTER VARYING(30), "
+                            f"response_url CHARACTER VARYING(60), "
                             f"sort_point_distance CHARACTER VARYING(30), "
-                            f"published_at CHARACTER VARYING(30), "
-                            f"created_at CHARACTER VARYING(30), "
+                            f"published_at TIMESTAMP, "
+                            f"created_at TIMESTAMP, "
                             f"archived bit, " #0,1,null
                             f"id_employer INTEGER REFERENCES employer (id_employer)"
                             f")")
