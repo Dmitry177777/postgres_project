@@ -83,16 +83,30 @@ class HeadHunterAPI (Engine):
 
         try:
             with conn.cursor() as cur:
-                # создаем БД если она есть, ловим ошибку
-                cur.execute(f'CREATE DATABASE "{data_base_name}"'
-                            f"USE '{data_base_name}';"
-                            f"CREATE TABLE employer "
+                # создаем БД если она есть пропускаем этап создания
+                cur.execute(f"SELECT COUNT(*) = 0 FROM pg_catalog.pg_database WHERE datname = '{data_base_name}';")
+                exists = cur.fetchone()
+                if not exists:
+                    cur.execute(f"CREATE DATABASE {data_base_name};")
+                    conn.commit() # сохранение изменений в базе
+        except:
+            raise
+        finally:
+            conn.close()
+
+        conn = psycopg2.connect(dbname=f'{data_base_name}', host='localhost', user='postgres', password='171717')
+
+        try:
+            with conn.cursor() as cur:
+                cur.execute(f"CREATE TABLE IF NOT EXISTS employer " # создаем таблицу если ее нет
                             f"(Id SERIAL PRIMARY KEY,"
                             f" FirstName CHARACTER VARYING(30), "
                             f"LastName CHARACTER VARYING(30), "
                             f"Email CHARACTER VARYING(30), "
                             f"ge INTEGER )")
+
             conn.commit() # сохранение изменений в базе
+
         except:
             raise
         finally:
