@@ -1,72 +1,21 @@
 import os
 import json
-from abc import ABC, abstractmethod
+# from abc import ABC, abstractmethod
 import time
 from requests import get, post, put, delete
 import psycopg2
 
-class Engine(ABC):
-    @abstractmethod
-    def get_vacancies(self):
-        pass
 
-    @abstractmethod
-    def get_page(self, page=0):
-        pass
-class Vacancy ():
-    """"Класс Vacancy"""
-
-
-    def __init__(self, search_query,top):
-
-        self.search_query =search_query #  поисковый запрос
-        self.top = top # количество вакансий для вывода
-        self.vacancy = self.get_vacancies()
-
-        pass
-
-    def get_vacancies(self):
-
-
-        if self.platforms in [1, 3]: # загрузка платформы 1 - "HeadHunter"
-            hh_vacancy = HeadHunterAPI(self.search_query,self.top)
-
-            for i in hh_vacancy:
-                for ii in i.get('items'):
-                    try:
-                        self.list.append({
-                                "payment_from": int(ii.get("salary", {}).get("from")),  # Сумма оклада от
-                                "payment_to": int(ii.get("salary", {}).get("to")),  # Сумма оклада до
-                                "currency": ii.get("salary", {}).get("currency"), # Валюта. Список возможных значений:  rub — рубль  uah — гривна  uzs — сум
-                                "platforms":"HeadHunter", # платформа ["HeadHunter", "SuperJob"]
-                                 "profession":ii.get("name"), # название вакансии
-                                 "candidat":ii.get("snippet",{}).get("requirement"), # 	Требования к кандидату
-                                 "work": ii.get("snippet",{}).get("responsibility"), # Должностные обязанности
-                                 "compensation": ii.get("working_days"), # Условия работы
-                                 "profession_url":ii.get("url") # ссылка на вакансию
-                                                                   })
-                    except:
-                       raise
-
-
-    def __repr__(self):
-        return f'Vacancy({self.search_query}, {self.top_n})'
-
-    def __str__(self):
-        return f'{self.search_query}, {self.top_n}'
-
-
-
-
-class HeadHunterAPI (Engine):
+class Vacancy :
     """"Класс HeadHunterAPI"""
 
     def __init__(self, vacancy, top):
         self.vacancy = vacancy
-        self.url ='https://api.hh.ru/vacancies'
-        self.pages = int(-1 * top // 1 * -1) # кругление количества страниц в большую сторону
-        self.list = self.get_vacancies()
-        create_postgres()
+        self.url = 'https://api.hh.ru/vacancies'
+        self.per_page = 20 # количество вакансий на 1 странице
+        self.pages = int(-1 * top // self.per_page * -1)  # кругление количества страниц в большую сторону
+        self.base = 'base'  # НАзвание используемой БД
+
         pass
 
 
@@ -79,8 +28,8 @@ class HeadHunterAPI (Engine):
         # Справочник для параметров GET-запроса
         par = {
             'text': self.vacancy, # Текст фильтра. В имени должно быть слово job_title
-            'area': '1', # Поиск ощуществляется по вакансиям htubjyf 113 (1 - город Москва)
-            'per_page': '20', # Кол-во вакансий на 1 странице
+            #'area': '1', # Поиск ощуществляется по вакансиям htubjyf 113 (1 - город Москва)
+            'per_page': self.per_page, # Кол-во вакансий на 1 странице
             'page': page # Индекс страницы поиска на HH
                }
 
@@ -103,6 +52,10 @@ class HeadHunterAPI (Engine):
     def get_vacancies(self):
         """переноса агруженных данных в PostgreSQL"""
 
+        #формируем базу данных и структуру таблиц
+        self.create_postgres()
+
+
         for page in range(0, self.pages):
 
             # Преобразуем текст ответа запроса в справочник Python
@@ -115,31 +68,97 @@ class HeadHunterAPI (Engine):
             except:
                 raise
 
-            # Необязательная задержка, но чтобы не нагружать сервисы hh, оставим. 5 сек мы может подождать
-            time.sleep(0.5)
 
-        # Создаем первичную базу данных
-        conn = psycopg2.connect(host='localhost',  user='postgres', password='171717')
-        try:
-            with conn:
+
+            # Поделючаемся к базе данных
+            conn = psycopg2.connect(dbname=f'{self.base}', host='localhost', user='postgres', password='171717')
+
+            # Записываем данные страницы в БД
+            try:
                 with conn.cursor() as cur:
-                    # execute query
-                    cur.execute("CREATE DATABASE BASE")
-                    for row in self.list:
-                        cur.execute("INSERT INTO customers VALUES (%s, %s, %s)",
-                                    (row['payment_from'], row['payment_to'], row['name']))
-        except:
-            raise
-        finally:
-            conn.close()
+                    for row in r_page.get("items"):
+                        # таблица employer
+                        # проверка значения на уникальность
+                        cur.execute(f'select count (employer_id) from employer WHERE employer_id = {row.get("employer", {}).get("id")}')
+                        unic = cur.fetchone()
+                        if unic[0] == 0 :
+                            #внесение уникальных записей
+                            cur.execute("INSERT INTO employer (employer_id,employer_name, employer_url, employer_vacancies_url, employer_trusted) VALUES (%s, %s, %s, %s, %s)",
+                                (row.get("employer", {}).get("id"),
+                                 row.get("employer", {}).get("name"),
+                                 row.get("employer", {}).get("url"),
+                                 row.get("employer", {}).get("vacancies_url"),
+                                 '1' if row.get("employer", {}).get("trusted") else '0')) # если True то записываем 1, если False то записываем 0
+                        conn.commit()  # сохранение изменений в базе
+
+                        # получение номера pk
+                        cur.execute(f"SELECT MAX(id_employer) FROM employer")
+                        id_employer_i = cur.fetchone()[0]
+
+                        # таблица area
+                        # проверка значения на уникальность
+                        cur.execute(f'select count (area_id) from area WHERE area_id = {row.get("area", {}).get("id")}')
+                        unic = cur.fetchone()[0]
+                        if unic == 0 :
+                        # внесение уникальных записей
+                             cur.execute("INSERT INTO area (area_id, area_name, area_url) VALUES (%s, %s, %s)",
+                                (row.get("area", {}).get("id"),
+                                 row.get("area", {}).get("name"),
+                                 row.get("area", {}).get("url")))
+
+                        conn.commit()  # сохранение изменений в базе
+                        #получение номера pk
+                        cur.execute(f"SELECT MAX(id_area) FROM area")
+                        id_area_i = cur.fetchone()[0]
+                        # таблица type
+                        # внесение  записей
+                        cur.execute("INSERT INTO type (type_id, type_name) VALUES (%s, %s)",
+                            (row.get("type", {}).get("id"),
+                             row.get("type", {}).get("name")))
+
+                        conn.commit()  # сохранение изменений в базе
+                        # получение номера pk
+                        cur.execute(f"SELECT MAX(id_type) FROM type")
+                        id_type_i = cur.fetchone()[0]
+
+                        # таблица vacancy
+                        # внесение  записей
+
+                        cur.execute("INSERT INTO employer (id, name, departament, id_area, salary_from, salary_to, salary_currency, salary_gross, id_type, address, response_url, sort_point_distance, published_at, created_at, archived, id_employer) "
+                                    "VALUES (%s, %s, %s, %s, %s,%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                            (row.get("id"),
+                             row.get("name"),
+                             row.get("department"),
+                             id_area_i,
+                             row.get("salary", {}).get("from"),
+                             row.get("salary", {}).get("to"),
+                             row.get("salary", {}).get("currency"),
+                             '1' if row.get("salary", {}).get("gross") else '0'), # если True то записываем 1, если False то записываем 0
+                             id_type_i,
+                             row.get("address"),
+                             row.get("response_url"),
+                             row.get("sort_point_distance"),
+                             row.get("published_at"),
+                             row.get("created_at"),
+                             '1' if row.get("archived") else '0',  # если True то записываем 1, если False то записываем 0,
+                             id_employer_i
+                             )
+
+                        conn.commit()  # сохранение изменений в базе
+
+            except:
+                raise
+            finally:
+                conn.close()
+
+        # Необязательная задержка, но чтобы не нагружать сервисы hh, оставим. 5 сек мы может подождать
+        time.sleep(0.5)
+
+        print('Вакансии HeadHunter сохранены в БД>')
+        pass
 
 
-
-        print('Вакансии HeadHunter сохранены в файл')
-        return json.dumps(self.list, ensure_ascii=False)
-
-    @staticmethod
-    def create_postgres():
+    def create_postgres(self):
         """cоздаем базу и структуру данных в PostgreSQL"""
 
         # Создаем подключение к PosgrySQL
@@ -148,22 +167,19 @@ class HeadHunterAPI (Engine):
 
         # включаем автоматическое сохранение изменений в БД
         conn.autocommit = True
-        # название рабочей БД
-        data_base_name = 'base'
+
 
         try:
             with conn.cursor() as cur:
-                # создаем БД если она есть пропускаем этап создания
-                cur.execute(f"SELECT COUNT(*) = 0 FROM pg_catalog.pg_database WHERE datname = '{data_base_name}';")
-                exists = cur.fetchone()
-                if exists:
-                    cur.execute(f"CREATE DATABASE {data_base_name};")
+                # Если база данных запроса была раньше удалем ее и  создаем новую БД
+                cur.execute(f"DROP DATABASE IF EXISTS {self.base} WITH(FORCE)")
+                cur.execute(f"CREATE DATABASE {self.base}")
         except:
             raise
         finally:
             conn.close()
 
-        conn = psycopg2.connect(dbname=f'{data_base_name}', host='localhost', user='postgres', password='171717')
+        conn = psycopg2.connect(dbname=f'{self.base}', host='localhost', user='postgres', password='171717')
 
         try:
             with conn.cursor() as cur:
@@ -185,12 +201,12 @@ class HeadHunterAPI (Engine):
                 # },
 
 
-                cur.execute(f"CREATE TABLE IF NOT EXISTS employer " # создаем таблицу если ее нет
+                cur.execute(f"CREATE TABLE employer " # создаем таблицу если ее нет
                             f"(id_employer SERIAL PRIMARY KEY,"
                             f"employer_id INTEGER UNIQUE NOT NULL, "
-                            f"employer_name CHARACTER VARYING(30), "
-                            f"employer_url CHARACTER VARYING(30), "
-                            f"employer_vacancies_url CHARACTER VARYING(30), "
+                            f"employer_name CHARACTER VARYING(60), "
+                            f"employer_url CHARACTER VARYING(60), "
+                            f"employer_vacancies_url CHARACTER VARYING(60), "
                             f"employer_trusted bit " #0,1,null
                             f")")
                 conn.commit()  # сохранение изменений в базе
@@ -199,7 +215,7 @@ class HeadHunterAPI (Engine):
                 # 'items': [
                 # {
                 # 'area': {'id': '1', 'name': 'Москва', 'url': 'https://api.hh.ru/areas/1'},
-                cur.execute(f"CREATE TABLE IF NOT EXISTS area "  # создаем таблицу если ее нет
+                cur.execute(f"CREATE TABLE area "  # создаем таблицу если ее нет
                             f"(id_area SERIAL PRIMARY KEY,"
                             f"area_id INTEGER UNIQUE NOT NULL, "
                             f"area_name CHARACTER VARYING(30), "
@@ -211,9 +227,9 @@ class HeadHunterAPI (Engine):
                 # 'items': [
                 # {
                 # 'type': {'id': 'open', 'name': 'Открытая'},
-                cur.execute(f"CREATE TABLE IF NOT EXISTS type "  # создаем таблицу если ее нет
+                cur.execute(f"CREATE TABLE type "  # создаем таблицу если ее нет
                             f"(id_type SERIAL PRIMARY KEY,"
-                            f"type_id INTEGER UNIQUE NOT NULL, "
+                            f"type_id CHARACTER VARYING(30) NOT NULL, "
                             f"type_name CHARACTER VARYING(30) "
                             f")")
                 conn.commit()  # сохранение изменений в базе
@@ -244,7 +260,7 @@ class HeadHunterAPI (Engine):
                 # 'alternate_url': 'https://hh.ru/vacancy/79663730',
                 # 'relations': [],
 
-                cur.execute(f"CREATE TABLE IF NOT EXISTS vacancy "  # создаем таблицу если ее нет
+                cur.execute(f"CREATE TABLE vacancy "  # создаем таблицу если ее нет
                             f"(id_vacancy SERIAL PRIMARY KEY,"
                             f"id INTEGER UNIQUE NOT NULL, "
                             f"name CHARACTER VARYING(30), "
