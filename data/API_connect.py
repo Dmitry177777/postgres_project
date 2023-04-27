@@ -77,7 +77,7 @@ class Vacancy :
             try:
                 with conn.cursor() as cur:
                     for row in r_page.get("items"):
-
+                        print (row)
 
                         # таблица employer
                         # проверка значения на уникальность
@@ -155,15 +155,14 @@ class Vacancy :
                                     "created_at, "
                                     "archived, "
                                     "id_employer) "
-                                    "VALUES (%s,%s,%s,%s,%s,%s,%s,%s)",
+                                    "VALUES %s,%s,%s,%s,%s,%s,%s,%s",
                                     (id_type_i,
-                                     row.get("address") or "",
+                                     row.get("address", {}).get("city")+", ул."+row.get("address", {}).get("street")+", д."+row.get("address", {}).get("building") or "",
                                      row.get("response_url") or "",
                                      row.get("sort_point_distance") or "",
                                      row.get("published_at"),
                                      row.get("created_at"),
-                                     '1' if row.get("archived") else '0',
-                                     # если True то записываем 1, если False то записываем 0,
+                                     '1' if row.get("archived") else '0',  # если True то записываем 1, если False то записываем 0,
                                      id_employer_i))
 
 
