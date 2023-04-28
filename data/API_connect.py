@@ -7,7 +7,8 @@ import psycopg2
 
 
 class Vacancy :
-    """"Класс HeadHunterAPI"""
+    """"Класс постраничного направления запроса на  API HeadHunter"""
+    """ Сохранение API ответа в созданной БД PostgreSQL"""
 
     def __init__(self, vacancy, top):
         self.vacancy = vacancy
