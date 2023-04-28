@@ -127,48 +127,68 @@ class Vacancy :
                         # таблица vacancy
                         # внесение  записей ч.1
                         cur.execute(f"INSERT INTO vacancy "
-                            "(id, "
+                            "(id_employer, "
+                            "id_area, "
+                            "id_type, "
+                            "id, "
                             "name, "
                             "departament, "
-                            "id_area, "
                             "salary_from, "
                             "salary_to, "
                             "salary_currency, "
-                            "salary_gross) "
-                            "VALUES (%s,%s,%s,%s,%s,%s,%s,%s)",
-                            (row.get("id"),
-                             row.get("name"),
-                             row.get("department") or "",
+                            "salary_gross, "
+                            "address_city, "
+                            "address_street, "
+                            "address_building, "
+                            "address_metro_station_id, "
+                            "address_metro_line_name, "
+                            "address_metro_station_name, "
+                            "response_url, "
+                            "sort_point_distance, "
+                            "published_at, "
+                            "created_at, "
+                            "archived) "
+                            "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                            (id_employer_i,
                              id_area_i,
-                             row.get("salary", {}).get("from") or 0,
-                             row.get("salary", {}).get("to") or 0,
-                             row.get("salary", {}).get("currency"),
-                             '1' if row.get("salary", {}).get("gross") else '0')) # если True то записываем 1, если False то записываем 0
+                             id_type_i,
+                             row.get("id"),
+                             row.get("name"),
+                             None if row.get("department") == None else row.get("department", {}).get("name") or None,
 
+                             None if row.get("salary") == None else row.get("salary", {}).get("from") or None,
+                             None if row.get("salary") == None else row.get("salary", {}).get("to") or None,
+                             None if row.get("salary") == None else row.get("salary", {}).get("currency"),
+                             None if row.get("salary") == None else '1' if row.get("salary", {}).get("gross") else '0', # если True то записываем 1, если False то записываем 0
 
-                        cur.execute(f"INSERT INTO vacancy "
-                                    "(id_type, "
-                                    "address, "
-                                    "response_url, "
-                                    "sort_point_distance, "
-                                    "published_at, "
-                                    "created_at, "
-                                    "archived, "
-                                    "id_employer) "
-                                    "VALUES %s,%s,%s,%s,%s,%s,%s,%s",
-                                    (id_type_i,
-                                     row.get("address", {}).get("city")+", ул."+row.get("address", {}).get("street")+", д."+row.get("address", {}).get("building") or "",
-                                     row.get("response_url") or "",
-                                     row.get("sort_point_distance") or "",
-                                     row.get("published_at"),
-                                     row.get("created_at"),
-                                     '1' if row.get("archived") else '0',  # если True то записываем 1, если False то записываем 0,
-                                     id_employer_i))
+                             None if row.get("address") == None else row.get("address", {}).get("city") or None,
+                             None if row.get("address") == None else row.get("address", {}).get("street") or None,
+                             None if row.get("address") == None else row.get("address", {}).get("building") or None,
+
+                             None if row.get("address") == None else None if  row.get("address", {}).get("metro") == None else row.get("address", {}).get("metro", {}).get("station_id") or None,
+                             None if row.get("address") == None else None if row.get("address", {}).get("metro") == None else row.get("address", {}).get("metro", {}).get("line_name") or None,
+                             None if row.get("address") == None else None if row.get("address", {}).get("metro") == None else row.get("address", {}).get("metro", {}).get("station_name") or None,
+
+                             row.get("response_url") or None,
+                             row.get("sort_point_distance") or None,
+                             row.get("published_at"),
+                             row.get("created_at"),
+                             '1' if row.get("archived") else '0',  # если True то записываем 1, если False то записываем 0,
+                             ))
+
+                        f"address_city CHARACTER VARYING(80), "
+                        f"address_street CHARACTER VARYING(100), "
+                        f"address_building CHARACTER VARYING(30), "
+
+                        f"address_metro_station_id CHARACTER VARYING(80), "
+                        f"address_metro_line_name CHARACTER VARYING(80), "
+                        f"address_metro_station_name CHARACTER VARYING(80), "
+
 
 
                         conn.commit()  # сохранение изменений в базе
 
-            except AttributeError:
+            except:
                 raise
             finally:
                 conn.close()
@@ -207,36 +227,18 @@ class Vacancy :
             with conn.cursor() as cur:
 
                 # Таблица работодателей
-
-                # 'items': [
-                # {
-                #'employer': {
-                # 'id': '598471',
-                # 'name': 'evrone.ru',
-                # 'url': 'https://api.hh.ru/employers/598471',
-                # 'alternate_url': 'https://hh.ru/employer/598471',
-                # 'logo_urls': {'original': 'https://hhcdn.ru/employer-logo-original/479584.png',
-                                # '240': 'https://hhcdn.ru/employer-logo/2360189.png',
-                                # '90': 'https://hhcdn.ru/employer-logo/2360188.png'},
-                # 'vacancies_url': 'https://api.hh.ru/vacancies?employer_id=598471',
-                # 'trusted': True
-                # },
-
-
                 cur.execute(f"CREATE TABLE employer " # создаем таблицу если ее нет
                             f"(id_employer SERIAL PRIMARY KEY,"
                             f"employer_id INTEGER UNIQUE NOT NULL, "
-                            f"employer_name CHARACTER VARYING(60), "
-                            f"employer_url CHARACTER VARYING(60), "
-                            f"employer_vacancies_url CHARACTER VARYING(60), "
+                            f"employer_name CHARACTER VARYING(300), "
+                            f"employer_url CHARACTER VARYING(100), "
+                            f"employer_vacancies_url CHARACTER VARYING(100), "
                             f"employer_trusted bit " #0,1,null
                             f")")
                 conn.commit()  # сохранение изменений в базе
 
+
                 #Таблица area
-                # 'items': [
-                # {
-                # 'area': {'id': '1', 'name': 'Москва', 'url': 'https://api.hh.ru/areas/1'},
                 cur.execute(f"CREATE TABLE area "  # создаем таблицу если ее нет
                             f"(id_area SERIAL PRIMARY KEY,"
                             f"area_id INTEGER UNIQUE NOT NULL, "
@@ -245,10 +247,8 @@ class Vacancy :
                             f")")
                 conn.commit()  # сохранение изменений в базе
 
+
                 # Таблица type
-                # 'items': [
-                # {
-                # 'type': {'id': 'open', 'name': 'Открытая'},
                 cur.execute(f"CREATE TABLE type "  # создаем таблицу если ее нет
                             f"(id_type SERIAL PRIMARY KEY,"
                             f"type_id CHARACTER VARYING(30) NOT NULL, "
@@ -256,50 +256,36 @@ class Vacancy :
                             f")")
                 conn.commit()  # сохранение изменений в базе
 
+
                 #Таблица вакансий
-
-                #'items': [
-                # {
-                # 'id': '79663730',
-                # 'premium': False,
-                # 'name': 'Python-разработчик (Junior)',
-                # 'department': None,
-                # 'has_test': False,
-                # 'response_letter_required': False,
-
-                # 'salary': {'from': 50000, 'to': 70000, 'currency': 'RUR', 'gross': False},
-
-                # 'address': None,
-                # 'response_url': None,
-                # 'sort_point_distance': None,
-                # 'published_at': '2023-04-26T20:00:18+0300',
-                # 'created_at': '2023-04-26T20:00:18+0300',
-                # 'archived': False,
-                # 'apply_alternate_url': 'https://hh.ru/applicant/vacancy_response?vacancyId=79663730',
-                # 'insider_interview': None,
-                # 'url': 'https://api.hh.ru/vacancies/79663730?host=hh.ru',
-                # 'adv_response_url': None,
-                # 'alternate_url': 'https://hh.ru/vacancy/79663730',
-                # 'relations': [],
-
                 cur.execute(f"CREATE TABLE vacancy "  # создаем таблицу если ее нет
                             f"(id_vacancy SERIAL PRIMARY KEY,"
-                            f"id INTEGER UNIQUE NOT NULL, "
-                            f"name CHARACTER VARYING(60), "
-                            f"departament CHARACTER VARYING(30), "
+                            f"id_employer INTEGER REFERENCES employer (id_employer),"
                             f"id_area INTEGER REFERENCES area (id_area), "
+                            f"id_type INTEGER REFERENCES type (id_type), "
+                            f"id INTEGER, " #UNIQUE NOT NULL
+                            f"name CHARACTER VARYING(100), "
+                            f"departament CHARACTER VARYING(60), "
+                            
                             f"salary_from INTEGER, "
                             f"salary_to INTEGER, "
-                            f"salary_currency CHARACTER VARYING(10), "
+                            f"salary_currency CHARACTER VARYING(30), "
                             f"salary_gross bit, " #0,1,null
-                            f"id_type INTEGER REFERENCES type (id_type), "
-                            f"address CHARACTER VARYING(30), "
-                            f"response_url CHARACTER VARYING(60), "
+                            
+                            f"address_city CHARACTER VARYING(80), "
+                            f"address_street CHARACTER VARYING(180), "
+                            f"address_building CHARACTER VARYING(30), "
+                            
+                            f"address_metro_station_id CHARACTER VARYING(80), "
+                            f"address_metro_line_name CHARACTER VARYING(80), "
+                            f"address_metro_station_name CHARACTER VARYING(80), "
+                            
+                            
+                            f"response_url CHARACTER VARYING(100), "
                             f"sort_point_distance CHARACTER VARYING(30), "
                             f"published_at TIMESTAMP, "
                             f"created_at TIMESTAMP, "
-                            f"archived bit, " #0,1,null
-                            f"id_employer INTEGER REFERENCES employer (id_employer)"
+                            f"archived bit " #0,1,null
                             f")")
 
 
