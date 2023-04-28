@@ -1,5 +1,4 @@
 import psycopg2
-# import data.queries
 
 
 class DBManager:
@@ -7,14 +6,17 @@ class DBManager:
 
     def __init__(self):
         self.base = 'base'  # Название используемой БД
-        self.conn = psycopg2.connect(dbname=f'{self.base}', host='localhost', user='postgres', password='171717')
+
         pass
+
+    def bd(self):
+        return psycopg2.connect(dbname=f'{self.base}', host='localhost', user='postgres', password='171717')
 
     def get_companies_and_vacancies_count(self):
         """получает список всех компаний и количество вакансий у каждой компании"""
-
+        conn = self.bd()
         try:
-            with self.conn.cursor() as cur:
+            with conn.cursor() as cur:
                 # формируем запрос
                 cur.execute(f"select DISTINCT Employer.employer_name, count(Vacancy.name) as vacancy "
                             "from employer Join vacancy USING (id_employer)"
@@ -25,12 +27,26 @@ class DBManager:
         except:
             raise
         finally:
-            self.conn.close()
+            conn.close()
 
         return reqest
     def get_all_vacancies(self):
         """получает список всех вакансий с указанием названия компании, названия вакансии и зарплаты и ссылки на вакансию"""
-        pass
+        conn = self.bd()
+        try:
+            with conn.cursor() as cur:
+                # формируем запрос
+                cur.execute(f"select Employer.employer_name, Vacancy.name,  Vacancy.salary_from, Vacancy.salary_to, Vacancy.salary_currency,Vacancy.response_url "
+                            "from employer Join vacancy USING (id_employer)")
+                reqest = cur.fetchall()
+
+
+        except:
+            raise
+        finally:
+            conn.close()
+
+        return reqest
 
     def get_avg_salary(self):
         """получает среднюю зарплату по вакансиям"""
