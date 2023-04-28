@@ -33,3 +33,9 @@ for row in req.get_avg_salary():
 input (f'\nсписок всех вакансий, у которых зарплата выше средней по всем вакансиям\n')
 for row in req.get_vacancies_with_higher_salary():
     print (row)
+
+"""получает список всех вакансий, в названии которых содержатся переданные в метод слова, например “python”"""
+input(f'\nсписок всех вакансий, в названии которых содержатся переданные в метод слова, например “python”\n')
+keyword = input(f'ведите поисковый запрос\n')
+for row in req.get_vacancies_with_keyword(keyword):
+    print(row)

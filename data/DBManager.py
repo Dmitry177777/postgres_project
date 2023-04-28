@@ -83,15 +83,15 @@ class DBManager:
 
         return reqest
 
-    def get_vacancies_with_keyword(self, ):
+    def get_vacancies_with_keyword(self,keyword):
         """получает список всех вакансий, в названии которых содержатся переданные в метод слова, например “python”"""
         conn = self.bd()
         try:
             with conn.cursor() as cur:
                 # формируем запрос
-                cur.execute(f"select  Vacancy.name, Employer.employer_name, Vacancy.salary_from, Vacancy.salary_to "
-                            "from vacancy Join employer USING (id_employer) "
-                            "Where Vacancy.salary_from > (select avg(salary_from) from vacancy )")
+                cur.execute(f"select Employer.employer_name, Vacancy.name,  Vacancy.salary_from, Vacancy.salary_to, Vacancy.salary_currency,Vacancy.response_url "
+                            "from employer Join vacancy USING (id_employer) "
+                            f"WHERE Vacancy.name LIKE '%' || '{keyword}' || '%';")
                 reqest = cur.fetchall()
 
         except:
