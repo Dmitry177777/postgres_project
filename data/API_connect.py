@@ -192,7 +192,7 @@ class Vacancy :
                              None if row.get("address") == None else None if row.get("address", {}).get("metro") == None else row.get("address", {}).get("metro", {}).get("line_name") or None,
                              None if row.get("address") == None else None if row.get("address", {}).get("metro") == None else row.get("address", {}).get("metro", {}).get("station_name") or None,
 
-                             row.get("response_url") or None,
+                             row.get("apply_alternate_url") or None,
                              row.get("sort_point_distance") or None,
                              row.get("published_at"),
                              row.get("created_at"),
