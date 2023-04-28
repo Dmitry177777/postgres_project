@@ -68,8 +68,6 @@ class Vacancy :
             except:
                 raise
 
-
-
             # Поделючаемся к базе данных
             conn = psycopg2.connect(dbname=f'{self.base}', host='localhost', user='postgres', password='171717')
 
@@ -91,11 +89,31 @@ class Vacancy :
                                  row.get("employer", {}).get("url"),
                                  row.get("employer", {}).get("vacancies_url"),
                                  '1' if row.get("employer", {}).get("trusted") else '0')) # если True то записываем 1, если False то записываем 0
+
+                        # получение уникального номера pk
+                        cur.execute( f'select (id_employer) from employer WHERE employer_id = {row.get("employer", {}).get("id")}')
+                        id_employer_i = cur.fetchone()[0]
                         conn.commit()  # сохранение изменений в базе
 
-                        # получение номера pk
-                        cur.execute(f"SELECT MAX(id_employer) FROM employer")
-                        id_employer_i = cur.fetchone()[0]
+
+                        # таблица professional_roles
+                        # проверка значения на уникальность
+                        cur.execute(f'select count (professional_roles_id) from professional_roles WHERE professional_roles_id = {row.get("professional_roles", {})[0].get("id")}')
+                        unic = cur.fetchone()
+                        if unic[0] == 0:
+                            # внесение уникальных записей
+                            cur.execute(
+                                "INSERT INTO professional_roles (professional_roles_id,professional_roles_name) VALUES (%s, %s)",
+                                (None if row.get("professional_roles", {})[0] == None else row.get("professional_roles", {})[0].get("id") or None,
+                                 None if row.get("professional_roles", {})[0] == None else row.get("professional_roles", {})[0].get("name") or None))
+
+
+                        # получение уникального номера pk
+                        cur.execute(f'select (id_professional_roles) from professional_roles WHERE professional_roles_id = {row.get("professional_roles", {})[0].get("id")}')
+                        id_professional_roles_i = cur.fetchone()[0]
+                        conn.commit()  # сохранение изменений в базе
+
+
 
                         # таблица area
                         # проверка значения на уникальность
@@ -108,10 +126,12 @@ class Vacancy :
                                  row.get("area", {}).get("name"),
                                  row.get("area", {}).get("url")))
 
-                        conn.commit()  # сохранение изменений в базе
-                        #получение номера pk
-                        cur.execute(f"SELECT MAX(id_area) FROM area")
+
+                        #получение уникального номера pk
+                        cur.execute(f'select (id_area) from area WHERE area_id = {row.get("area", {}).get("id")}')
                         id_area_i = cur.fetchone()[0]
+
+                        conn.commit()  # сохранение изменений в базе
 
                         # таблица type
                         # внесение  записей
@@ -120,7 +140,7 @@ class Vacancy :
                              row.get("type", {}).get("name")))
 
                         conn.commit()  # сохранение изменений в базе
-                        # получение номера pk
+                        # получение последнего номера pk
                         cur.execute(f"SELECT MAX(id_type) FROM type")
                         id_type_i = cur.fetchone()[0]
 
@@ -130,6 +150,7 @@ class Vacancy :
                             "(id_employer, "
                             "id_area, "
                             "id_type, "
+                            "id_professional_roles, "
                             "id, "
                             "name, "
                             "departament, "
@@ -148,10 +169,11 @@ class Vacancy :
                             "published_at, "
                             "created_at, "
                             "archived) "
-                            "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                            "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
                             (id_employer_i,
                              id_area_i,
                              id_type_i,
+                             id_professional_roles_i,
                              row.get("id"),
                              row.get("name"),
                              None if row.get("department") == None else row.get("department", {}).get("name") or None,
@@ -175,15 +197,6 @@ class Vacancy :
                              row.get("created_at"),
                              '1' if row.get("archived") else '0',  # если True то записываем 1, если False то записываем 0,
                              ))
-
-                        f"address_city CHARACTER VARYING(80), "
-                        f"address_street CHARACTER VARYING(100), "
-                        f"address_building CHARACTER VARYING(30), "
-
-                        f"address_metro_station_id CHARACTER VARYING(80), "
-                        f"address_metro_line_name CHARACTER VARYING(80), "
-                        f"address_metro_station_name CHARACTER VARYING(80), "
-
 
 
                         conn.commit()  # сохранение изменений в базе
@@ -238,6 +251,16 @@ class Vacancy :
                 conn.commit()  # сохранение изменений в базе
 
 
+                #Таблица professional_roles
+                cur.execute(f"CREATE TABLE professional_roles "  # создаем таблицу если ее нет
+                            f"(id_professional_roles SERIAL PRIMARY KEY,"
+                            f"professional_roles_id INTEGER UNIQUE NOT NULL, "
+                            f"professional_roles_name CHARACTER VARYING(100) "
+                            f")")
+                conn.commit()  # сохранение изменений в базе
+
+
+
                 #Таблица area
                 cur.execute(f"CREATE TABLE area "  # создаем таблицу если ее нет
                             f"(id_area SERIAL PRIMARY KEY,"
@@ -263,6 +286,8 @@ class Vacancy :
                             f"id_employer INTEGER REFERENCES employer (id_employer),"
                             f"id_area INTEGER REFERENCES area (id_area), "
                             f"id_type INTEGER REFERENCES type (id_type), "
+                            f"id_professional_roles INTEGER REFERENCES professional_roles (id_professional_roles), "
+                            
                             f"id INTEGER, " #UNIQUE NOT NULL
                             f"name CHARACTER VARYING(100), "
                             f"departament CHARACTER VARYING(60), "
