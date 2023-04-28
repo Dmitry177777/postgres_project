@@ -4,11 +4,11 @@ import psycopg2
 from data.API_connect import Vacancy
 from data.DBManager import DBManager
 
-# инициализируем начальные данные запроса к API
-# vacancy = input (f'введите искомую вакансию \n')
-# top = int(input (f'введите объем списка вакансий \n'))
-# vac = Vacancy(vacancy, top)
-# vac.get_vacancies()
+#инициализируем начальные данные запроса к API
+vacancy = input (f'введите искомую вакансию \n')
+top = int(input (f'введите объем списка вакансий \n'))
+vac = Vacancy(vacancy, top)
+vac.get_vacancies()
 
 
 # Запускаем класс DBManager и оформляем запросы к созданной БД

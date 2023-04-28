@@ -76,7 +76,7 @@ class Vacancy :
             try:
                 with conn.cursor() as cur:
                     for row in r_page.get("items"):
-                        print (row)
+                        # print (row)
 
                         # таблица employer
                         # проверка значения на уникальность
